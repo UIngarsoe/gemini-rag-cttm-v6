@@ -89,8 +89,31 @@ def dhammi_chat(prompt: str, history: list) -> str:
     # 3. Construct the Final Prompt (Injecting Context)
     final_user_prompt = f"--- DHAMMI CTTM CONTEXT (Use these facts to anchor your response) ---\n{rag_context}\n--- USER QUERY ---\n{prompt}"
     
-    # 4. Prepare Messages for the API
-    messages = # /mount/src/gemini-rag-cttm-v6/streamlit_app.py - Inside dhammi_chat function
+    # 4. Prepare Messages for the API (Use safe loop logic)
+api_messages = []
+
+# Process historical messages, ensuring content is a valid string
+for msg in history:
+    content_text = msg.get("content")
+    if content_text and isinstance(content_text, str):
+        api_messages.append(
+            types.Content(
+                role=msg["role"], 
+                parts=[types.Part.from_text(content_text)]
+            )
+        )
+
+# Add the current user prompt
+api_messages.append(types.Content(role="user", parts=[types.Part.from_text(final_user_prompt)]))
+
+# 5. Gemini API Call
+try:
+    response = client.models.generate_content(
+        model=MODEL_NAME,
+        contents=api_messages,  # <--- MUST use api_messages here!
+        config=types.GenerateContentConfig(
+# ... rest of the code ...
+            
 
 # 1. Initialize the messages list for the API call
 api_messages = []
