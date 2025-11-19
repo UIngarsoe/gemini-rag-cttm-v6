@@ -1,0 +1,5 @@
+streamlit
+google-genai
+requests
+beautifulsoup4
+streamlit-gsheets-connection # <-- NEW LIBRARY for easy Sheets integration
