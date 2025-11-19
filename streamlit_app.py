@@ -111,7 +111,24 @@ try:
     response = client.models.generate_content(
         model=MODEL_NAME,
         contents=api_messages,  # <--- MUST use api_messages here!
+        # /mount/src/gemini-rag-cttm-v6/streamlit_app.py - Inside dhammi_chat function
+
+# 5. Gemini API Call
+try:
+    response = client.models.generate_content(
+        model=MODEL_NAME,
+        contents=api_messages,
         config=types.GenerateContentConfig(
+            system_instruction=SYSTEM_INSTRUCTION,
+            temperature=0.7,
+            max_output_tokens=1024
+        )  # <--- CHECK HERE: There should be a closing parenthesis for GenerateContentConfig
+    )  # <--- CHECK HERE: There MUST be a closing parenthesis for client.models.generate_content
+    return response.text
+        
+except Exception as e:
+    # ... error handling ...
+    
 # ... rest of the code ...
             
 
