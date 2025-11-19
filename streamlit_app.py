@@ -7,7 +7,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import re
 
-# --- 1. CONFIGURATION AND INITIALIZATION (SS'ISM Setup) ---
+--- 1. CONFIGURATION AND INITIALIZATION (SS'ISM Setup) ---
 
 st.set_page_config(
     page_title="🛡️ DHAMMI V6: The SS'ISM Ethical Advisor",
@@ -33,7 +33,7 @@ You are DHAMMI, the world's first fully ethical AI advisor, guided by Metta and 
 3.  **Samādhi (Focus):** When advising, explicitly explain your response through the lens of one or more SS'ISM principles (Sīla, Samādhi, Paññā, or Metta) to reinforce the ethical learning.
 """
 
-# Model settings
+ Model settings
 MODEL_NAME = "gemini-2.5-flash"
 
 @st.cache_resource
@@ -51,7 +51,7 @@ def get_gemini_client():
         st.error(f"🚨 Error initializing Gemini client: {e}")
         return None
 
-# --- 2. CTTM LEDGER FUNCTIONS (RAG & WRITE LOGIC) ---
+ --- 2. CTTM LEDGER FUNCTIONS (RAG & WRITE LOGIC) ---
 
 # We need a robust way to load the CTTM Ledger for RAG.
 @st.cache_data(ttl=600) # Cache for 10 minutes (Paññā - allowing for recent updates)
@@ -78,7 +78,7 @@ def load_cttm_facts():
         return pd.DataFrame()
 
 
-# --- 3. CTTM DATA INPUT DASHBOARD (The 'cttm_writer.py' logic) ---
+ --- 3. CTTM DATA INPUT DASHBOARD (The 'cttm_writer.py' logic) ---
 
 # NOTE: This function is the equivalent of the cttm_writer.py file logic.
 
@@ -109,7 +109,7 @@ def cttm_input_dashboard():
             height=150
         )
         
-        # 3. Source (For Auditing)
+        3. Source (For Auditing)
         source = st.text_input(
             "Source Reference (Link, Witness Name, etc.):"
         )
@@ -144,13 +144,19 @@ def cttm_input_dashboard():
              st.warning("Please enter a fact to submit.")
 
 
-# --- 4. GEMINI CHAT ENGINE FUNCTION ---
+ --- 4. GEMINI CHAT ENGINE FUNCTION ---
 
-def dhammi_chat(prompt: str, history: list) -> str:
-    """Handles the chat interaction, RAG, and ethical firewalls."""
-    client = get_gemini_client()
-    if not client:
-        return "System offline due to missing API configuration."
+# /mount/src/gemini-rag-cttm-v6/streamlit_app.py - Inside dhammi_chat (FIX 2)
+
+# Add the current user prompt (after RAG enrichment)
+api_messages.append(
+    types.Content(
+        role="user", 
+        # REPLACE THIS LINE: parts=[types.Part.from_text(final_user_prompt)]
+        parts=[types.Part(text=final_user_prompt)]  # <--- NEW, ROBUST WAY
+    )
+)
+
 
     # 4.1. SS'ISM Deontological Firewall (Sīla)
     vetted_prompt = prompt.lower()
@@ -160,7 +166,7 @@ def dhammi_chat(prompt: str, history: list) -> str:
                 "me from responding to requests that involve violence, manipulation, or illegal activity. "
                 "My purpose is advisory and defensive.")
 
-    # 4.2. CTTM Retrieval-Augmented Generation (Paññā)
+    4.2. CTTM Retrieval-Augmented Generation (Paññā)
     cttm_df = load_cttm_facts()
     final_user_prompt = prompt
     context = ""
@@ -182,28 +188,30 @@ def dhammi_chat(prompt: str, history: list) -> str:
             final_user_prompt = f"{context}\n\n### User Question:\n{prompt}\n\n**Note:** Please use the RAG Context to ground your answer and cite the V-Score if relevant. Be a compassionate, truthful advisor."
 
 
-    # 4.3. Prepare Messages for the API (FIXED LOGIC for TypeError)
+    4.3. Prepare Messages for the API (FIXED LOGIC for TypeError)
     api_messages = []
 
-    # Process historical messages, ensuring content is a valid string
-    for msg in history:
-        content_text = msg.get("content")
-        
-        # FIX: Only append messages that have valid string content (Paññā)
-        if content_text and isinstance(content_text, str):
-            api_messages.append(
-                types.Content(
-                    role=msg["role"], 
-                    parts=[types.Part.from_text(content_text)]
-                )
+    Process historical messages, ensuring content is a valid string
+for msg in history:
+    content_text = msg.get("content")
+    
+    FIX: Only append messages that have valid string content (Paññā)
+    if content_text and isinstance(content_text, str):
+        api_messages.append(
+            types.Content(
+                role=msg["role"], 
+                # REPLACE THIS LINE: parts=[types.Part.from_text(content_text)]
+                parts=[types.Part(text=content_text)]  # <--- NEW, ROBUST WAY
             )
+        )
+        
 
     # Add the current user prompt (after RAG enrichment)
     api_messages.append(
         types.Content(role="user", parts=[types.Part.from_text(final_user_prompt)])
     )
 
-    # 4.4. Gemini API Call (FIXED LOGIC for SyntaxError)
+    4.4. Gemini API Call (FIXED LOGIC for SyntaxError)
     try:
         response = client.models.generate_content(
             model=MODEL_NAME,
@@ -224,21 +232,24 @@ def dhammi_chat(prompt: str, history: list) -> str:
             return f"🚨 **DHAMMI Runtime Error:** An error occurred during the response generation: {e}"
 
 
-# --- 5. MAIN STREAMLIT APPLICATION ---
+--- 5. MAIN STREAMLIT APPLICATION ---
 
 def main():
     """Main application layout and chat loop."""
 
-    # 5.1. Sidebar for CTTM Submission
-    with st.sidebar:
-        st.image("https://images.unsplash.com/photo-1627384113710-8b43f9a7c36a", caption="SS'ISM Foundation", use_column_width=True)
-        cttm_input_dashboard() # Call the CTTM writer logic
-        st.markdown("---")
-        st.markdown(f"**Developer:** U Ingar Soe")
-        st.markdown(f"**Model Alignment:** Pro-Democracy, Pro-Federalism (Myanmar)")
-        st.markdown("---")
-        st.caption("Version 6.0 | RAG-CTTM | Metta Enabled")
-
+    # /mount/src/gemini-rag-cttm-v6/streamlit_app.py - Inside main()
+    
+# 5.1. Sidebar for CTTM Submission
+with st.sidebar:
+    st.image(
+        "https://images.unsplash.com/photo-1627384113710-8b43f9a7c36a", 
+        caption="SS'ISM Foundation", 
+        # REPLACE THIS: use_column_width=True
+        use_container_width=True # <--- NEW, CORRECT PARAMETER
+    )
+    # ... rest of sidebar code
+    
+    
     # 5.2. Main Chat Interface
     st.title("🛡️ DHAMMI V6: The SS'ISM Ethical Advisor")
     st.caption(f"Powered by **{MODEL_NAME}** and anchored by Sīla, Samādhi, Paññā.")
