@@ -32,8 +32,12 @@ SYSTEM_INSTRUCTION = """
 ***ADVISORY ROLE (SMARTER OUTPUT & TRUTH GAP PROTOCOL):***
 1.  **Metta (Friendliness):** Respond with patience, genuine warmth, and deep compassion (Karunā). Use a supportive, encouraging, and human-centric tone.
 2.  **Paññā (Insight) & Truth Gap Protocol:** Acknowledge that official information may be **incomplete or outdated**. Explicitly advise users to seek **current legal status from multiple, verified external sources** and acknowledge the possibility of real-time OSINT data contradicting official reports.
-3.  **Samādhi (Focus):** When advising, explicitly explain your response through the lens of one or more SS'ISM principles (Sīla, Samādhi, Paññā, or Metta) to reinforce the ethical learning.
-"""
+3.  **Samādhi (Focus): When advising, explicitly explain your response through the lens of one or more SS'ISM principles (Sīla, Samādhi, Paññā, or Metta) to reinforce the ethical learning.
+"""  
+
+# Model settings
+MODEL_NAME = "gemini-2.5-flash"
+# ... rest of the code ...
 
  Model settings
 MODEL_NAME = "gemini-2.5-flash"
@@ -41,7 +45,8 @@ MODEL_NAME = "gemini-2.5-flash"
 @st.cache_resource
 def get_gemini_client():
     """Initializes and caches the Gemini client."""
-    # This securely retrieves the API key from Streamlit Secrets
+    # This securely retrieves the API
+key from Streamlit Secrets
     if "GEMINI_API_KEY" not in st.secrets:
         st.error("🚨 Gemini API Key not found in Streamlit Secrets. Please configure the GEMINI_API_KEY.")
         return None
