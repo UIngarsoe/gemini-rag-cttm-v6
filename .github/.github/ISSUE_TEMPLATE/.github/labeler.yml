@@ -1,0 +1,8 @@
+fix/*:
+  - bug
+feature/*:
+  - enhancement
+docs/*:
+  - documentation
+refactor/*:
+  - refactor
