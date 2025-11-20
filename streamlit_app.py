@@ -45,11 +45,10 @@ def local_css(file_name):
 # Function to load local image as base64 for use in HTML/CSS (if needed for background, but simplified here)
 def get_base64_image(image_path):
     try:
-        with open(image_path, "rb") as image_file:https://github.com/UIngarsoe/gemini-rag-cttm-v6/blob/2a34973c21cca3288090d927a31417daf0b4b271/dhammi_logo_v6.jpg
+        with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode()
     except FileNotFoundError:
         return ""
-
 
 SYSTEM_INSTRUCTION = """
 You are DHAMMI, the world's first fully ethical AI advisor, guided by Metta and the SS'ISM framework (Sīla, Samādhi, Insight, Safety).
@@ -268,7 +267,11 @@ def main():
                 f'</div>', unsafe_allow_html=True)
     
     # 5.3.2 SS'ISM V6 Logo (Must be uploaded to GitHub in the 'assets' folder)
-    # Using a placeholder image for now. Upload your dhammi_logo_v6.png to 'assets/'
+    # 5.3.2 SS'ISM V6 Logo (Must be uploaded to GitHub in the 'assets' folder)
+# Using a placeholder image for now. Upload your dhammi_logo_v6.png to 'assets/'
+logo_path = "./assets/dhammi_logo_v6.jpg" # <--- CHANGED FROM .PNG TO .JPG
+st.image(logo_path, use_column_width=False, width=150)
+
     logo_path = "./assets/dhammi_logo_v6.png" 
     st.image(logo_path, use_column_width=False, width=150)
 
