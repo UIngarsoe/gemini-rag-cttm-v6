@@ -272,7 +272,7 @@ def main():
 logo_path = "./assets/dhammi_logo_v6.jpg" # <--- CHANGED FROM .PNG TO .JPG
 st.image(logo_path, use_column_width=False, width=150)
 
-    def main():
+def main():
     # ... other code ...
 
     # --- 5.3 NEW MAIN PAGE HEADER (The Poormanmeism Core Design) ---
