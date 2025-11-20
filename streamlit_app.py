@@ -35,12 +35,10 @@ MODEL_NAME = "gemini-2.5-flash"
 @st.cache_resource
 def get_gemini_client():
     """Initializes and caches the Gemini client."""
-    # Check for API key in secrets
     if "GEMINI_API_KEY" not in st.secrets:
         st.error("🚨 Gemini API Key not found. Please add GEMINI_API_KEY to Streamlit Secrets.")
         return None
     try:
-        # Initialize client using the key from secrets
         client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
         return client
     except Exception as e:
@@ -55,9 +53,7 @@ def get_gemini_client():
 def load_cttm_facts():
     """Reads the CTTM Ground Truth Ledger from Google Sheets."""
     try:
-        # Check if connection exists in secrets to avoid crash
         if "connections" not in st.secrets or "gsheets" not in st.secrets["connections"]:
-            # Return empty dataframe silently if not configured, so chat still works
             return pd.DataFrame()
             
         conn = st.connection("gsheets", type=GSheetsConnection)
@@ -74,7 +70,6 @@ def load_cttm_facts():
         df = df.sort_values(by='Confidence', ascending=False)
         return df
     except Exception as e:
-        # Log error but don't stop the app
         print(f"RAG Warning: {e}") 
         return pd.DataFrame()
 
@@ -159,29 +154,23 @@ def dhammi_chat(prompt: str, history: list):
                 context = "### RAG Context (CTTM Ledger):\n" + "\n".join(context_lines) + "\n"
                 final_user_prompt = f"{context}\n\n### User Question:\n{prompt}\n\n(Use the RAG Context if relevant)"
 
-    # 4.3 Prepare messages - FIX FOR 400 INVALID_ARGUMENT
+    # 4.3 Prepare messages
     api_messages = []
-    
-    # Iterate through history, but exclude the very last message if it is the current user prompt
-    # (We will add the 'final_user_prompt' with RAG context manually at the end)
     messages_to_process = history[:-1] if history and history[-1]["role"] == "user" else history
 
     for msg in messages_to_process:
         role = msg["role"]
         content = msg["content"]
-        
         # MAP ROLES: Streamlit "assistant" -> Gemini "model"
         if role == "assistant":
             api_role = "model"
         else:
             api_role = "user"
-            
         api_messages.append(types.Content(role=api_role, parts=[types.Part(text=content)]))
 
-    # Append the CURRENT (enriched) prompt
     api_messages.append(types.Content(role="user", parts=[types.Part(text=final_user_prompt)]))
 
-    # 4.4 Call Gemini
+    # 4.4 Call Gemini - UNLOCKED VERSION
     try:
         response = client.models.generate_content(
             model=MODEL_NAME,
@@ -189,7 +178,27 @@ def dhammi_chat(prompt: str, history: list):
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 temperature=0.7,
-                max_output_tokens=1024
+                # INCREASED TOKEN LIMIT to prevent cutoff
+                max_output_tokens=8192, 
+                # ADJUSTED SAFETY SETTINGS to allow political discourse
+                safety_settings=[
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                        threshold="BLOCK_ONLY_HIGH"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_HARASSMENT",
+                        threshold="BLOCK_ONLY_HIGH"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_HATE_SPEECH",
+                        threshold="BLOCK_ONLY_HIGH"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        threshold="BLOCK_ONLY_HIGH"
+                    ),
+                ]
             )
         )
         return response.text
@@ -222,19 +231,15 @@ def main():
 
     # Get user prompt
     if prompt := st.chat_input("Ask Dhammi V6 a question..."):
-        # Add user message to state
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generate response
         with st.chat_message("assistant"):
             with st.spinner("Meditating on the answer (Paññā Check)..."):
-                # Pass full history to the function
                 response = dhammi_chat(prompt, st.session_state.messages)
             st.markdown(response)
 
-        # Add assistant response to state
         st.session_state.messages.append({"role": "assistant", "content": response})
 
 if __name__ == "__main__":
