@@ -1,0 +1,22 @@
+*** Begin Patch
+*** Update File: streamlit_app.py
+@@
+-    for msg in history:
+-        content_text = msg.get("content") if isinstance(msg, dict) else None
+-        if content_text and isinstance(content_text, str):
+-            api_messages.append(types.Content(role=msg["role"], parts=[types.Part(text=content_text)]))
++    for msg in history:
++        # Expect history items like {"role": "user"/"assistant", "content": "..."}
++        content_text = msg.get("content") if isinstance(msg, dict) else None
++        if content_text and isinstance(content_text, str):
++            role = msg.get("role", "user")
++            # Streamlit uses "assistant" for model replies; Gemini expects "model"
++            if role == "assistant":
++                role = "model"
++            api_messages.append(types.Content(role=role, parts=[types.Part(text=content_text)]))
+@@
+-    # Add the current user prompt (after RAG enrichment)
+-    api_messages.append(types.Content(role="user", parts=[types.Part.from_text(final_user_prompt)]))
++    # Add the current user prompt (after RAG enrichment)
++    api_messages.append(types.Content(role="user", parts=[types.Part(text=final_user_prompt)]))
+*** End Patch
