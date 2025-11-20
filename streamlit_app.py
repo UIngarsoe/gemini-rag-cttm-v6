@@ -45,7 +45,7 @@ def local_css(file_name):
 # Function to load local image as base64 for use in HTML/CSS (if needed for background, but simplified here)
 def get_base64_image(image_path):
     try:
-        with open(image_path, "rb") as image_file:
+        with open(image_path, "rb") as image_file:https://github.com/UIngarsoe/gemini-rag-cttm-v6/blob/2a34973c21cca3288090d927a31417daf0b4b271/dhammi_logo_v6.jpg
             return base64.b64encode(image_file.read()).decode()
     except FileNotFoundError:
         return ""
