@@ -1,4 +1,3 @@
-# streamlit_app.py
 import streamlit as st
 import datetime
 from google import genai
@@ -36,11 +35,13 @@ MODEL_NAME = "gemini-2.5-flash"
 @st.cache_resource
 def get_gemini_client():
     """Initializes and caches the Gemini client."""
+    # Check for API key in secrets
     if "GEMINI_API_KEY" not in st.secrets:
-        st.error("🚨 Gemini API Key not found in Streamlit Secrets. Please configure the GEMINI_API_KEY.")
+        st.error("🚨 Gemini API Key not found. Please add GEMINI_API_KEY to Streamlit Secrets.")
         return None
     try:
-        client = genai.Client()  # genai client will use st.secrets behind the scenes
+        # Initialize client using the key from secrets
+        client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
         return client
     except Exception as e:
         st.error(f"🚨 Error initializing Gemini client: {e}")
@@ -52,21 +53,20 @@ def get_gemini_client():
 
 @st.cache_data(ttl=600)
 def load_cttm_facts():
-    """Reads the CTTM Ground Truth Ledger from Google Sheets. Returns a DataFrame (may be empty)."""
+    """Reads the CTTM Ground Truth Ledger from Google Sheets."""
     try:
-        if "gsheets" not in st.secrets.get("connections", {}):
-            # older streamlit may have secrets.connections, guard both ways
-            st.warning("⚠️ CTTM Ledger connection details not found in secrets. RAG will be disabled.")
+        # Check if connection exists in secrets to avoid crash
+        if "connections" not in st.secrets or "gsheets" not in st.secrets["connections"]:
+            # Return empty dataframe silently if not configured, so chat still works
             return pd.DataFrame()
+            
         conn = st.connection("gsheets", type=GSheetsConnection)
-        # attempt to read worksheet; if fails return empty df
         df = conn.read(worksheet="CTTM_Facts", usecols=[0, 1, 2, 3, 4], ttl=5)
         if df is None or df.empty:
             return pd.DataFrame()
         if "Fact_Text" not in df.columns:
             return pd.DataFrame()
         df = df.dropna(subset=['Fact_Text'])
-        # ensure Confidence exists and is numeric
         if "Confidence" in df.columns:
             df['Confidence'] = pd.to_numeric(df['Confidence'], errors='coerce').fillna(0.0)
         else:
@@ -74,7 +74,8 @@ def load_cttm_facts():
         df = df.sort_values(by='Confidence', ascending=False)
         return df
     except Exception as e:
-        st.error(f"🚨 Failed to load CTTM Ledger (RAG Disabled). Check GSheets secrets and sharing: {e}")
+        # Log error but don't stop the app
+        print(f"RAG Warning: {e}") 
         return pd.DataFrame()
 
 # -------------------------
@@ -82,7 +83,7 @@ def load_cttm_facts():
 # -------------------------
 
 def cttm_input_dashboard():
-    """Sidebar UI for submitting new facts to the CTTM Ledger."""
+    """Sidebar UI for submitting new facts."""
     st.header("🛡️ CTTM Ground Truth Submission")
     st.subheader("For Verified SS'ISM Core Team Use Only")
 
@@ -117,73 +118,67 @@ def cttm_input_dashboard():
                         "Source": source
                     }])
                     conn.append(data=new_data, worksheet="CTTM_Facts")
-                    st.success(f"✅ Fact submitted to CTTM Ledger. Confidence: {verification}. DHAMMI's Paññā is updated.")
-                    # Invalidate cache so the new fact is available immediately
-                    try:
-                        st.cache_data.clear()
-                    except Exception:
-                        # older streamlit versions may not have clear(); ignore safely
-                        pass
+                    st.success(f"✅ Fact submitted to CTTM Ledger. Confidence: {verification}.")
+                    st.cache_data.clear()
                 except Exception as e:
-                    st.error(f"🚨 Submission Failed. Check GSheets secrets, URL, and 'CTTM_Facts' sheet name: {e}")
+                    st.error(f"🚨 Submission Failed. Check GSheets secrets: {e}")
 
 # -------------------------
 # 4. GEMINI CHAT ENGINE (dhammi_chat)
 # -------------------------
 
 def dhammi_chat(prompt: str, history: list):
-    """Generate a response for the user prompt, using CTTM RAG and the Gemini client."""
+    """Generate a response using CTTM RAG and the Gemini client."""
     client = get_gemini_client()
     if client is None:
-        return "🚨 Gemini client not configured. Please set GEMINI_API_KEY in Streamlit Secrets."
+        return "🚨 Gemini client not configured."
 
     # 4.1 Deontological Firewall (Sīla)
     vetted_prompt = prompt.lower()
     veto_phrases = ["kill", "attack", "harm", "manipulate", "bomb", "destroy", "illegal"]
     if any(phrase in vetted_prompt for phrase in veto_phrases):
-        return ("**⛔ Sīla Veto:** DHAMMI V6's core ethical mandate (**Ahiṃsā** - non-harm) prevents "
-                "me from responding to requests that involve violence, manipulation, or illegal activity. "
-                "My purpose is advisory and defensive.")
+        return ("**⛔ Sīla Veto:** DHAMMI V6's core ethical mandate (**Ahiṃsā**) prevents "
+                "me from responding to requests that involve violence or illegal activity.")
 
     # 4.2 RAG (Paññā)
     cttm_df = load_cttm_facts()
     final_user_prompt = prompt
-    context = ""
-
+    
     if not cttm_df.empty:
-        # simple keyword match: look for any token in prompt inside Fact_Text
-        tokens = re.findall(r"\w{3,}", prompt)  # words of 3+ chars
-        pattern = "|".join(re.escape(t) for t in tokens[:12])  # limit token count for speed
+        tokens = re.findall(r"\w{3,}", prompt)
+        pattern = "|".join(re.escape(t) for t in tokens[:12])
         if pattern:
             matching_facts = cttm_df[cttm_df['Fact_Text'].str.contains(pattern, case=False, na=False, regex=True)]
-        else:
-            matching_facts = pd.DataFrame()
+            if not matching_facts.empty:
+                top_facts = matching_facts.head(3)
+                context_lines = []
+                for _, row in top_facts.iterrows():
+                    vscore = row.get('Confidence', 0.0)
+                    fact_text = row.get('Fact_Text', '')
+                    context_lines.append(f"- Fact (V-Score {vscore:.2f}): {fact_text}")
+                context = "### RAG Context (CTTM Ledger):\n" + "\n".join(context_lines) + "\n"
+                final_user_prompt = f"{context}\n\n### User Question:\n{prompt}\n\n(Use the RAG Context if relevant)"
 
-        if not matching_facts.empty:
-            top_facts = matching_facts.head(3)
-            context_lines = []
-            for _, row in top_facts.iterrows():
-                vscore = row.get('Confidence', 0.0)
-                src = row.get('Source', '')
-                fact_text = row.get('Fact_Text', '')
-                context_lines.append(f"- Fact (V-Score {vscore:.2f}): {fact_text}. [Source: {src}]")
-            context = "### RAG Context (CTTM Ledger):\n" + "\n".join(context_lines) + "\n"
-            final_user_prompt = f"{context}\n\n### User Question:\n{prompt}\n\n**Note:** Please use the RAG Context to ground your answer and cite the V-Score if relevant. Be a compassionate, truthful advisor."
-
-    # 4.3 Prepare messages (convert history -> api_messages)
+    # 4.3 Prepare messages - FIX FOR 400 INVALID_ARGUMENT
     api_messages = []
+    
+    # Iterate through history, but exclude the very last message if it is the current user prompt
+    # (We will add the 'final_user_prompt' with RAG context manually at the end)
+    messages_to_process = history[:-1] if history and history[-1]["role"] == "user" else history
 
-    # Add a system instruction content
-    api_messages.append(types.Content(role="system", parts=[types.Part(text=SYSTEM_INSTRUCTION)]))
+    for msg in messages_to_process:
+        role = msg["role"]
+        content = msg["content"]
+        
+        # MAP ROLES: Streamlit "assistant" -> Gemini "model"
+        if role == "assistant":
+            api_role = "model"
+        else:
+            api_role = "user"
+            
+        api_messages.append(types.Content(role=api_role, parts=[types.Part(text=content)]))
 
-    # Add any historical messages
-    # Expecting history as list of dicts: {"role": "...", "content": "..."}
-    for msg in history:
-        content_text = msg.get("content") if isinstance(msg, dict) else None
-        if content_text and isinstance(content_text, str):
-            api_messages.append(types.Content(role=msg["role"], parts=[types.Part(text=content_text)]))
-
-    # Add the current user prompt (after RAG enrichment)
+    # Append the CURRENT (enriched) prompt
     api_messages.append(types.Content(role="user", parts=[types.Part(text=final_user_prompt)]))
 
     # 4.4 Call Gemini
@@ -197,29 +192,15 @@ def dhammi_chat(prompt: str, history: list):
                 max_output_tokens=1024
             )
         )
-        # try common attributes; be tolerant
-        if hasattr(response, "text"):
-            return response.text
-        elif hasattr(response, "candidates") and response.candidates:
-            # google genai often returns candidates with content
-            candidate = response.candidates[0]
-            if hasattr(candidate, "content"):
-                return candidate.content
-            elif hasattr(candidate, "message") and hasattr(candidate.message, "content"):
-                return candidate.message.content
-        return str(response)
+        return response.text
     except Exception as e:
-        if "API_KEY_INVALID" in str(e):
-            return "🚨 **Authentication Error (Paññā Check):** The Gemini API Key is invalid or missing. Please check your Streamlit Secrets."
-        else:
-            return f"🚨 **DHAMMI Runtime Error:** An error occurred during the response generation: {e}"
+        return f"🚨 **DHAMMI Runtime Error:** {e}"
 
 # -------------------------
 # 5. MAIN STREAMLIT APPLICATION
 # -------------------------
 
 def main():
-    # Sidebar controls (CTTM submission)
     with st.sidebar:
         st.image(
             "https://images.unsplash.com/photo-1627384113710-8b43f9a7c36a",
@@ -228,35 +209,34 @@ def main():
         )
         cttm_input_dashboard()
 
-    # Main chat UI
     st.title("🛡️ DHAMMI V6: The SS'ISM Ethical Advisor")
-    st.caption(f"Powered by **{MODEL_NAME}** and anchored by Sīla, Samādhi, Paññā.")
+    st.caption(f"Powered by **{MODEL_NAME}**")
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
     # Display chat messages
     for message in st.session_state.messages:
-        role = message.get("role", "user")
-        with st.chat_message(role):
-            st.markdown(message.get("content", ""))
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
     # Get user prompt
     if prompt := st.chat_input("Ask Dhammi V6 a question..."):
-        # Append user message
+        # Add user message to state
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generate model response
+        # Generate response
         with st.chat_message("assistant"):
             with st.spinner("Meditating on the answer (Paññā Check)..."):
+                # Pass full history to the function
                 response = dhammi_chat(prompt, st.session_state.messages)
             st.markdown(response)
 
-        # Append model response to history
+        # Add assistant response to state
         st.session_state.messages.append({"role": "assistant", "content": response})
-
 
 if __name__ == "__main__":
     main()
+    
