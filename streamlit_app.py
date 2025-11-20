@@ -272,7 +272,23 @@ def main():
 logo_path = "./assets/dhammi_logo_v6.jpg" # <--- CHANGED FROM .PNG TO .JPG
 st.image(logo_path, use_column_width=False, width=150)
 
-    logo_path = "./assets/dhammi_logo_v6.png" 
+    def main():
+    # ... other code ...
+
+    # --- 5.3 NEW MAIN PAGE HEADER (The Poormanmeism Core Design) ---
+    
+    # 5.3.1 Google Branding (Top of the App)
+    st.markdown(f'<div style="text-align: center; margin-bottom: 5px;">'
+                f'<img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png" alt="Google Logo" style="height: 30px;"/>'
+                f'<br>Powered by <span style="font-weight: bold; color: #4285F4;">Google</span> <span style="font-weight: bold; color: #34A853;">Gemini</span>'
+                f'</div>', unsafe_allow_html=True)
+    
+    # 5.3.2 SS'ISM V6 Logo (Must be uploaded to GitHub in the 'assets' folder)
+    # Using a placeholder image for now. Upload your dhammi_logo_v6.png to 'assets/'
+    logo_path = "./assets/dhammi_logo_v6.png" # <--- THIS LINE MUST BE INDENTED ONLY 4 SPACES
+    st.image(logo_path, use_column_width=False, width=150) # <--- THIS LINE MUST ALSO BE 4 SPACES
+    # ... and all following lines in the main function
+        
     st.image(logo_path, use_column_width=False, width=150)
 
     # 5.3.3 Main Title (SS'ISM DHAMMI V6)
