@@ -5,50 +5,16 @@ from google.genai import types
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import re
-import base64
 
 # -------------------------
 # 1. CONFIGURATION AND INITIALIZATION (SS'ISM Setup)
 # -------------------------
 
 st.set_page_config(
-    page_title="🛡️ SS'ISM DHAMMI V6: The Ethical Advisor",
+    page_title="🛡️ DHAMMI V6: The SS'ISM Ethical Advisor",
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# --- CSS FOR DESIGN (Vibrant Colors, Centering, Motto Color) ---
-# NOTE: You MUST create an 'assets' folder in your GitHub repo and place the logo image inside it.
-def local_css(file_name):
-    """Function to load custom CSS from a file."""
-    try:
-        with open(file_name) as f:
-            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-    except FileNotFoundError:
-        # If CSS file is missing, inject simple style for motto color
-        st.markdown(f"""
-            <style>
-                /* Set Motto Text Color to a vibrant Cyan */
-                .stApp [data-testid="stHeader"] h2 {{
-                    color: #00FFFF; /* Cyan */
-                    text-align: center;
-                    font-size: 2.2em;
-                    font-weight: 800;
-                }}
-                /* Ensure Title/Motto is readable */
-                .stApp .css-1d3w5oq, .stApp .css-1gh1zsk {{
-                    text-align: center;
-                }}
-            </style>
-            """, unsafe_allow_html=True)
-
-# Function to load local image as base64 for use in HTML/CSS (if needed for background, but simplified here)
-def get_base64_image(image_path):
-    try:
-        with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode()
-    except FileNotFoundError:
-        return ""
 
 SYSTEM_INSTRUCTION = """
 You are DHAMMI, the world's first fully ethical AI advisor, guided by Metta and the SS'ISM framework (Sīla, Samādhi, Insight, Safety).
@@ -244,13 +210,7 @@ def dhammi_chat(prompt: str, history: list):
 # -------------------------
 
 def main():
-    # --- 5.1 Load Custom CSS for Styling ---
-    # Attempt to load style.css (best practice for complex styling)
-    local_css("./assets/style.css") 
-    
-    # --- 5.2 Sidebar (CTTM Dashboard) ---
     with st.sidebar:
-        # Placeholder for sidebar logo. You can replace this with a more suitable 'SS'ISM' logo.
         st.image(
             "https://images.unsplash.com/photo-1627384113710-8b43f9a7c36a",
             caption="SS'ISM Foundation",
@@ -258,53 +218,8 @@ def main():
         )
         cttm_input_dashboard()
 
-    # --- 5.3 NEW MAIN PAGE HEADER (The Poormanmeism Core Design) ---
-    
-    # 5.3.1 Google Branding (Top of the App)
-    st.markdown(f'<div style="text-align: center; margin-bottom: 5px;">'
-                f'<img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png" alt="Google Logo" style="height: 30px;"/>'
-                f'<br>Powered by <span style="font-weight: bold; color: #4285F4;">Google</span> <span style="font-weight: bold; color: #34A853;">Gemini</span>'
-                f'</div>', unsafe_allow_html=True)
-    
-    # 5.3.2 SS'ISM V6 Logo (Must be uploaded to GitHub in the 'assets' folder)
-    # 5.3.2 SS'ISM V6 Logo (Must be uploaded to GitHub in the 'assets' folder)
-# Using a placeholder image for now. Upload your dhammi_logo_v6.png to 'assets/'
-logo_path = "./assets/dhammi_logo_v6.jpg" # <--- CHANGED FROM .PNG TO .JPG
-st.image(logo_path, use_column_width=False, width=150)
-
-def main():
-    # ... other code ...
-
-    # --- 5.3 NEW MAIN PAGE HEADER (The Poormanmeism Core Design) ---
-    
-    # 5.3.1 Google Branding (Top of the App)
-    st.markdown(f'<div style="text-align: center; margin-bottom: 5px;">'
-                f'<img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png" alt="Google Logo" style="height: 30px;"/>'
-                f'<br>Powered by <span style="font-weight: bold; color: #4285F4;">Google</span> <span style="font-weight: bold; color: #34A853;">Gemini</span>'
-                f'</div>', unsafe_allow_html=True)
-    
-    # 5.3.2 SS'ISM V6 Logo (Must be uploaded to GitHub in the 'assets' folder)
-    # Using a placeholder image for now. Upload your dhammi_logo_v6.png to 'assets/'
-    logo_path = "./assets/dhammi_logo_v6.png" # <--- THIS LINE MUST BE INDENTED ONLY 4 SPACES
-    st.image(logo_path, use_column_width=False, width=150) # <--- THIS LINE MUST ALSO BE 4 SPACES
-    # ... and all following lines in the main function
-        
-    st.image(logo_path, use_column_width=False, width=150)
-
-    # 5.3.3 Main Title (SS'ISM DHAMMI V6)
-    st.markdown('<h1 style="text-align: center; color: #FFD700;">🛡️ SS\'ISM DHAMMI V6: The Ethical Advisor</h1>', unsafe_allow_html=True)
-
-    # 5.3.4 Motto (The centerpiece, styled with custom CSS)
-    st.markdown('<h2>CODE WITH TRUTH. DEFEAT PSY-WAR.</h2>', unsafe_allow_html=True)
-
-    # 5.3.5 Philosophy (The supporting text)
-    st.markdown(f'<div style="text-align: center; margin-bottom: 30px; font-style: italic; color: #CCCCCC;">'
-                f'The more you feed truth, the less space there is for disinformation. '
-                f'We fight information wars with transparency.'
-                f'</div>', unsafe_allow_html=True)
-
-    # Horizontal Divider for a clean separation from the chat area
-    st.divider()
+    st.title("🛡️ DHAMMI V6: The SS'ISM Ethical Advisor")
+    st.caption(f"Powered by **{MODEL_NAME}**")
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -315,7 +230,7 @@ def main():
             st.markdown(message["content"])
 
     # Get user prompt
-    if prompt := st.chat_input("Ask DHAMMI V6 a question..."):
+    if prompt := st.chat_input("Ask Dhammi V6 a question..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
